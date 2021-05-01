@@ -1,32 +1,66 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
+    <AppHeader></AppHeader>
+
+    <div class="article-container my-5">
+      <router-view
+        class="animate__animated animate__fadeIn"
+      />
     </div>
-    <router-view/>
+
+    <AppFooter></AppFooter>
   </div>
 </template>
 
+<script>
+import AppHeader from './components/AppHeader.vue';
+import AppFooter from './components/AppFooter.vue';
+
+export default {
+  name: 'App',
+  components: {
+    AppHeader,
+    AppFooter,
+  },
+};
+</script>
+
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+/* Set all the common styling here */
+.article-container {
+  min-height: calc(100vh - 200px);
 }
 
-#nav {
-  padding: 30px;
+.ws-link {
+  color: #459fff;
+  transition: all .2s linear;
 }
 
-#nav a {
-  font-weight: bold;
-  color: #2c3e50;
+.ws-link:hover, .ws-link:focus {
+  text-decoration: none;
 }
 
-#nav a.router-link-exact-active {
-  color: #42b983;
+.ws-btn, .ws-btn:disabled {
+  background-color: #6c757d;
+  border: 0;
+  color: #fff;
 }
+
+.ws-btn-rounded {
+  border-radius: 100%;
+}
+
+.ws-btn:hover,
+  .ws-btn:focus,
+  .ws-btn:hover:focus,
+  .ws-btn:active,
+  .ws-btn:active:hover:focus {
+  background-color: #545b62;
+  color: #fff;
+}
+
+.page-title {
+  color: #545b62;
+}
+
 </style>
