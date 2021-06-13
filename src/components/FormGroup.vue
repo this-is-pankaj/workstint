@@ -13,6 +13,7 @@
         v-model="formElem.value"
         :disabled="formElem.disabled"
         :required="formElem.required"
+        :pattern="formElem.pattern"
         autocomplete="off"
       />
     </div>
@@ -22,7 +23,35 @@
       <label
         :for="formElem.id"
       > {{ formElem.label }} </label>
-      <div class="input-group">
+      <!-- Template for GSTIN type fields -->
+      <div class="input-group" v-if="formElem.type==='gstin'">
+        <input
+          type="text"
+          class="form-control"
+          :id="formElem.id"
+          :placeholder="formElem.placeholder"
+          :readonly="formElem.readOnly"
+          v-model="formElem.value"
+          :disabled="formElem.disabled"
+          :aria-label="formElem.placeholder"
+          :required="formElem.required"
+          :pattern="formElem.pattern"
+          autocomplete="off"
+        />
+        <div class="input-group-append">
+          <!-- Append this button only for GSTINs -->
+          <button class="btn btn-outline-secondary"
+            @click.stop.prevent="customClickAction(formElem)"
+            :disabled="formElem.disabled"
+          >
+            Go <font-awesome-icon
+              icon="arrow-right"
+            ></font-awesome-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="input-group" v-else>
         <input
           :type="formElem.type"
           class="form-control"
@@ -33,6 +62,7 @@
           :disabled="formElem.disabled"
           :aria-label="formElem.placeholder"
           :required="formElem.required"
+          :pattern="formElem.pattern"
           autocomplete="off"
         />
         <div class="input-group-append">
@@ -42,11 +72,11 @@
             v-if="formElem.grpType === 'password'"
           >
             <font-awesome-icon
-              icon="eye"
+              icon="eye-slash"
               v-show="formElem.type==='password'"
             ></font-awesome-icon>
             <font-awesome-icon
-              icon="eye-slash"
+              icon="eye"
               v-show="formElem.type==='input'"
             ></font-awesome-icon>
           </button>
@@ -137,6 +167,12 @@ export default {
       }
 
       this.formElem.type = 'input';
+    },
+    customClickAction(formElem) {
+      if (formElem.disabled) {
+        return;
+      }
+      formElem.customClickAction(formElem.value);
     },
   },
 };

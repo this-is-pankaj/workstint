@@ -3,9 +3,15 @@
     <div class="mb-4">
       <h3 class="page-title text-center"> Reset Password </h3>
     </div>
+    <alerts
+      :type="notification.type"
+      v-if="notification.shouldDisplay"
+      :bullets="notification.list"
+      :message="notification.message"
+    />
     <form
       :class="{ 'was-validated': showValidationResults }"
-      @submit.prevent="resetPassword"
+      @submit.prevent="resetPwd"
       novalidate
     >
       <FormGroup
@@ -30,6 +36,8 @@
 </template>
 
 <script>
+import { mapActions } from 'vuex';
+import Alerts from '../components/Alerts.vue';
 import FormGroup from '../components/FormGroup.vue';
 import { encrypt } from '../utils/commonUtils';
 
@@ -37,6 +45,7 @@ export default {
   name: 'login',
   components: {
     FormGroup,
+    Alerts,
   },
   data: () => ({
     showValidationResults: false,
@@ -62,6 +71,8 @@ export default {
         value: '',
         disabled: false,
         required: true,
+        // eslint-disable-next-line no-useless-escape
+        pattern: '\\d{10}',
       },
       {
         id: 'password',
@@ -88,17 +99,40 @@ export default {
         required: true,
       },
     ],
+    notification: {
+      shouldDisplay: false,
+      list: [],
+      message: '',
+      type: 'default',
+    },
   }),
   methods: {
-    resetPassword: function (e) {
+    ...mapActions(['resetPassword']),
+    resetPwd: function (e) {
       const formObj = e.target;
       // Validate the form first
       const v = this.validateForm(formObj);
-      console.log(v);
       this.showValidationResults = !v.isValid;
-      const creds = v.data;
-      creds.password = encrypt(creds.password);
-      console.log(creds);
+      if (v.isValid) {
+        const formData = v.data;
+        formData.password = encrypt(formData.password);
+        console.log(formData);
+        this.resetPassword(formData)
+          .then(() => {
+            this.$router.push('/login');
+          })
+          .catch((err) => {
+            this.notification.type = 'error';
+            this.notification.shouldDisplay = true;
+            this.notification.list = [];
+            this.notification.message = err.message;
+          });
+      } else {
+        this.notification.type = 'error';
+        this.notification.shouldDisplay = true;
+        this.notification.list = v.errors;
+        this.notification.message = '';
+      }
     },
     validateForm: function (formElement) {
       const vObj = {

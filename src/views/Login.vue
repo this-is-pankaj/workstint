@@ -1,12 +1,18 @@
 <template>
   <div class="login container p-md-4">
+    <alerts
+      :type="notification.type"
+      v-if="notification.shouldDisplay"
+      :bullets="notification.list"
+      :message="notification.message"
+    />
     <div class="btn-group mb-5" role="group" aria-label="Basic example">
       <router-link type="button" class="btn btn-secondary active" to="">Login</router-link>
       <router-link type="button" class="btn btn-secondary" to="/signup">Register</router-link>
     </div>
     <form
       :class="{ 'was-validated': showValidationResults }"
-      @submit.prevent="login"
+      @submit.prevent="logUserIn"
       novalidate
     >
       <FormGroup
@@ -28,6 +34,8 @@
 </template>
 
 <script>
+import { mapActions } from 'vuex';
+import Alerts from '../components/Alerts.vue';
 import FormGroup from '../components/FormGroup.vue';
 import { encrypt } from '../utils/commonUtils';
 
@@ -35,6 +43,7 @@ export default {
   name: 'login',
   components: {
     FormGroup,
+    Alerts,
   },
   data: () => ({
     showValidationResults: false,
@@ -71,17 +80,41 @@ export default {
         disabled: false,
       },
     ],
+    notification: {
+      shouldDisplay: false,
+      list: [],
+      message: '',
+      type: 'default',
+    },
   }),
   methods: {
-    login: function (e) {
+    ...mapActions(['login']),
+    logUserIn: function (e) {
       const formObj = e.target;
       // Validate the form first
       const v = this.validateForm(formObj);
       console.log(v);
       this.showValidationResults = !v.isValid;
-      const creds = v.data;
-      creds.password = encrypt(creds.password);
-      console.log(creds);
+      if (v.isValid) {
+        const formData = v.data;
+        formData.password = encrypt(formData.password);
+        console.log(formData);
+        this.login(formData)
+          .then(() => {
+            this.$router.push('/');
+          })
+          .catch((err) => {
+            this.notification.type = 'error';
+            this.notification.shouldDisplay = true;
+            this.notification.list = [];
+            this.notification.message = err.message;
+          });
+      } else {
+        this.notification.type = 'error';
+        this.notification.shouldDisplay = true;
+        this.notification.list = v.errors;
+        this.notification.message = '';
+      }
     },
     validateForm: function (formElement) {
       const vObj = {
@@ -102,11 +135,6 @@ export default {
           vObj.isValid = false;
           vObj.errors.push(`Invalid Value for ${fieldObj.label}.`);
         }
-      }
-
-      // Check if password and confirm password have same values
-      if (creds.password !== creds.confirmPassword) {
-        vObj.errors.push('Values in Confirm Password & Password fields do not match.');
       }
 
       vObj.data = creds;

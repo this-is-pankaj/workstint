@@ -4,9 +4,15 @@
       <h3 class="page-title text-center">My Profile</h3>
     </div>
 
+    <alerts
+      :type="notification.type"
+      v-if="notification.shouldDisplay"
+      :bullets="notification.list"
+      :message="notification.message"
+    />
     <form
       :class="{ 'was-validated': showValidationResults }"
-      @submit.prevent="updateProfile"
+      @submit.stop.prevent="updateProfile"
       novalidate
     >
       <div class="my-profile-options d-flex justify-content-end">
@@ -25,11 +31,12 @@
         </button>
       </div>
       <div class="row mb-4">
-        <div class="col-md-4" v-for="elem in computedFormGroups" :key="elem.id+elem.disabled">
-          <FormGroup
-            :formElem = "elem"
-          />
-        </div>
+        <FormGroup
+          :formElem = "elem"
+          v-for="elem in computedFormGroups"
+          :key="elem.id+elem.disabled"
+          :class="elem.class.join(' ')"
+        />
       </div>
     </form>
 
@@ -50,9 +57,32 @@
 
 <script>
 import AddressManager from '../components/AddressManager.vue';
+import Alerts from '../components/Alerts.vue';
 import CredentialsManager from '../components/CredentialsManager.vue';
 import FormGroup from '../components/FormGroup.vue';
 // import { encrypt } from '../utils/commonUtils';
+import reqUtils from '../utils/requestUtils';
+import patterns from '../utils/fieldsPattern';
+
+const flattenRes = (profile) => {
+  if (!profile.firstName) {
+    const { firstName, middleName, lastName } = profile.name;
+    delete profile.name;
+    profile.firstName = firstName;
+    profile.middleName = middleName;
+    profile.lastName = lastName;
+  }
+  return profile;
+};
+
+const updateFieldsWithFetchedValues = (fields, values) => {
+  const flattenedValues = flattenRes(values);
+  const updatedFields = fields.map((g) => {
+    g.value = flattenedValues[g.id];
+    return g;
+  });
+  return updatedFields;
+};
 
 export default {
   name: 'myProfile',
@@ -60,6 +90,7 @@ export default {
     FormGroup,
     AddressManager,
     CredentialsManager,
+    Alerts,
   },
   computed: {
     computedFormGroups() {
@@ -84,6 +115,7 @@ export default {
           placeholder: 'First Name',
           value: '',
           required: true,
+          class: ['col-md-4'],
         },
         {
           id: 'middleName',
@@ -91,7 +123,9 @@ export default {
           label: 'Middle Name',
           type: 'text',
           placeholder: 'Middle Name',
+          value: '',
           required: false,
+          class: ['col-md-4'],
         },
         {
           id: 'lastName',
@@ -101,6 +135,7 @@ export default {
           placeholder: 'Last Name',
           value: '',
           required: true,
+          class: ['col-md-4'],
         },
         {
           id: 'email',
@@ -110,6 +145,7 @@ export default {
           placeholder: 'Email',
           value: '',
           required: true,
+          class: ['col-md-6'],
         },
         {
           id: 'phone',
@@ -119,15 +155,7 @@ export default {
           placeholder: 'Phone',
           value: '',
           required: true,
-        },
-        {
-          id: 'gstin',
-          element: 'input',
-          label: 'My GSTIN',
-          type: 'text',
-          placeholder: 'GSTIN',
-          value: '',
-          required: true,
+          class: ['col-md-6'],
         },
         {
           id: 'tradeName',
@@ -138,15 +166,23 @@ export default {
           value: '',
           disabled: true,
           alwaysDisabled: true,
+          class: ['col-md-6'],
         },
-      ],
-      addresses: [
         {
-          id: 'default',
-          nick: 'Default',
-          line1: 'test line 1',
+          id: 'gstin',
+          element: 'inputGrp',
+          label: 'My GSTIN',
+          type: 'gstin',
+          placeholder: 'GSTIN',
+          pattern: patterns.gstin,
+          value: '',
+          required: true,
+          class: ['col-md-6'],
+          customClickAction: this.updateTradeName,
         },
       ],
+      profileGstinDetails: null,
+      addresses: [],
       credentials: {
         ewb: {
           username: {
@@ -159,11 +195,73 @@ export default {
           },
         },
       },
+      notification: {
+        shouldDisplay: false,
+        list: [],
+        message: '',
+        type: 'default',
+      },
     };
+  },
+  mounted() {
+    reqUtils.sendRequest('myProfile')
+      .then((profile) => {
+        // Assign values to the formGroups
+        this.formGroups = updateFieldsWithFetchedValues([...this.formGroups], profile);
+        this.addresses = profile.addresses || [];
+      })
+      .catch((err) => {
+        this.notification.type = 'error';
+        this.notification.shouldDisplay = true;
+        this.notification.list = [];
+        this.notification.message = err.message;
+        console.log(err);
+      });
   },
   methods: {
     enableEditing() {
       this.isEditable = true;
+    },
+    getCurrentFieldValue(field) {
+      const matchingField = this.formGroups.find((f) => f.id === field);
+      return matchingField.value;
+    },
+    updateTradeName(gstin) {
+      reqUtils.sendRequest('fetchGstinInfo', { id: gstin })
+        .then((info) => {
+          this.profileGstinDetails = info;
+          this.notification.type = 'success';
+          this.notification.shouldDisplay = true;
+          this.notification.list = [];
+          this.notification.message = 'Company Details Fetched Successfully!';
+          this.formGroups = this.formGroups.map((f) => {
+            if (f.id === 'tradeName') {
+              console.log(info);
+              f.value = info.tradeName;
+            }
+            return f;
+          });
+          const incomingLoc = info.adAddress.loc.split(',');
+          this.addresses = [
+            {
+              nick: 'Default',
+              line1: `${info.adAddress.bno}, ${info.adAddress.st}`,
+              line2: `${info.adAddress.flno}, ${info.adAddress.bnm}`,
+              line3: `${info.adAddress.loc}`,
+              // If city is not available, try looking for the city name in loc property and pick the last string from the same.
+              city: `${info.adAddress.city || (incomingLoc.length > 1 ? incomingLoc[incomingLoc.length - 1] : incomingLoc[0])}`,
+              district: info.adAddress.dist,
+              pinCode: info.adAddress.pncd,
+              state: info.adAddress.stcd,
+            },
+          ];
+        })
+        .catch((err) => {
+          this.notification.type = 'error';
+          this.notification.shouldDisplay = true;
+          this.notification.list = [];
+          this.notification.message = err.message;
+        });
     },
     saveNewAddress(updatedList) {
       this.addresses = [...updatedList];
@@ -177,7 +275,27 @@ export default {
         updatedProfile.addresses = this.addresses;
         updatedProfile.credentials = this.credentials;
         console.log(updatedProfile);
+        reqUtils.sendRequest('updateMyProfile', {}, updatedProfile)
+          .then((res) => {
+            this.notification.type = 'success';
+            this.notification.shouldDisplay = true;
+            this.notification.list = [];
+            this.notification.message = 'Profile Updated Successfully!';
+            this.formGroups = updateFieldsWithFetchedValues([...this.formGroups], res);
+          })
+          .catch((err) => {
+            console.log(err);
+            this.notification.type = 'error';
+            this.notification.shouldDisplay = true;
+            this.notification.list = [];
+            this.notification.message = err.message;
+          });
         this.isEditable = false;
+      } else {
+        this.notification.shouldDisplay = true;
+        this.notification.type = 'error';
+        this.notification.list = v.errors;
+        this.notification.message = '';
       }
     },
     validateForm: function () {
@@ -190,10 +308,10 @@ export default {
       // vObj.isValid = formElement.checkValidity();
       const fieldsList = [...this.formGroups];
 
-      const creds = {};
+      const formObj = {};
       for (let i = 0; i < fieldsList.length; i++) {
         const fieldObj = fieldsList[i];
-        creds[fieldObj.id] = fieldObj.value;
+        formObj[fieldObj.id] = fieldObj.value;
         // Check if the required fields have values
         if (fieldObj.required && !fieldObj.value) {
           vObj.isValid = false;
@@ -201,12 +319,7 @@ export default {
         }
       }
 
-      // Check if password and confirm password have same values
-      // if (creds.password !== creds.confirmPassword) {
-      //   vObj.errors.push('Values in Confirm Password & Password fields do not match.');
-      // }
-
-      vObj.data = creds;
+      vObj.data = formObj;
       return vObj;
     },
   },

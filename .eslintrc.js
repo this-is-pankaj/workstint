@@ -18,5 +18,6 @@ module.exports = {
     'func-names': 'off',
     'no-plusplus': 'off',
     'no-param-reassign': 'off',
+    'max-len': 'warn',
   },
 };

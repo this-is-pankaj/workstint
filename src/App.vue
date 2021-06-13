@@ -1,7 +1,10 @@
 <template>
   <div id="app">
     <AppHeader></AppHeader>
-
+    <loader
+      v-if="loaderState.isVisible"
+      :text="loaderState.text"
+    />
     <div class="article-container my-5">
       <router-view
         class="animate__animated animate__fadeIn"
@@ -13,14 +16,26 @@
 </template>
 
 <script>
+import { mapActions, mapGetters } from 'vuex';
 import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
+import Loader from './components/Loader.vue';
 
 export default {
   name: 'App',
   components: {
     AppHeader,
     AppFooter,
+    Loader,
+  },
+  computed: {
+    ...mapGetters({ loaderState: 'loaderState' }),
+  },
+  methods: {
+    ...mapActions({ closeLoader: 'closeLoader' }),
+  },
+  mounted() {
+    this.closeLoader();
   },
 };
 </script>
@@ -63,4 +78,12 @@ export default {
   color: #545b62;
 }
 
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

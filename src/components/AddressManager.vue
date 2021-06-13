@@ -34,7 +34,7 @@
         </thead>
         <tbody>
           <tr
-            v-if="!addresses.length"
+            v-if="!addressList.length"
           >
             <td
               colspan="3"
@@ -43,15 +43,19 @@
             </td>
           </tr>
           <tr
-            v-for="(address, index) in addresses"
-            :key="address.id"
+            v-for="(address, index) in addressList"
+            :key="index"
           >
-            <td>{{ address.nick }} </td>
+            <td class="text-center">{{ address.nick }} </td>
             <td>
               <address>{{ address.line1 }}</address>
+              <address>{{ address.line2 }}</address>
+              <address>{{ address.line3 }}</address>
+              <address>{{ address.city }} {{ address.district? `,${address.district}`: '' }} - {{ address.pinCode }} </address>
+              <address>{{ address.state }}</address>
             </td>
             <td>
-              <div class="text-center" v-if="isEditable && address.id!=='default'">
+              <div class="text-center" v-if="isEditable && address.nick.toLowerCase()!=='default'">
                 <button
                   class="btn btn-danger btn-sm ws-btn-rounded py-0 px-1"
                   title="Remove Address"

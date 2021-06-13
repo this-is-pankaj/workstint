@@ -11,5 +11,10 @@
 <script>
 export default {
   name: 'MyClients',
+  beforeMount() {
+    if (!this.$store.getters.isUserAuthenticated) {
+      this.$router.push({ path: '/login', query: { redirect: 'clients' } });
+    }
+  },
 };
 </script>

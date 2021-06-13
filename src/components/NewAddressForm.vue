@@ -3,6 +3,11 @@
     :class="{ 'was-validated': showValidationResults }"
     @submit.prevent.stop=""
   >
+    <alerts
+      :type="notification.type"
+      v-if="notification.shouldDisplay"
+      :bullets="notification.list"
+    />
     <div class="row">
       <form-group
         v-for="(elem, index) in formGroups"
@@ -29,10 +34,14 @@
 </template>
 
 <script>
+import Alerts from './Alerts.vue';
 import FormGroup from './FormGroup.vue';
 
 export default {
-  components: { FormGroup },
+  components: {
+    FormGroup,
+    Alerts,
+  },
   name: 'NewAddressForm',
   props: {
 
@@ -50,6 +59,10 @@ export default {
         const creds = v.data;
         creds.id = creds.nick.split(' ').join('_');
         this.$emit('saveNewAddress', creds);
+      } else {
+        this.notification.type = 'error';
+        this.notification.shouldDisplay = true;
+        this.notification.list = v.errors;
       }
     },
     validateForm: function () {
@@ -144,6 +157,11 @@ export default {
           required: true,
         },
       ],
+      notification: {
+        shouldDisplay: false,
+        list: [],
+        type: 'default',
+      },
     };
   },
 };

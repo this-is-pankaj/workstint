@@ -16,20 +16,29 @@
       </button>
       <div class="collapse navbar-collapse" id="wsNavBar">
         <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
-          <li class="nav-item">
-            <router-link class="nav-link" to="/">Home</router-link>
-          </li>
-          <li class="nav-item">
+          <li
+            class="nav-item"
+            v-if="!isLoggedIn"
+          >
             <router-link class="nav-link" to="/login">Login</router-link>
           </li>
-          <li class="nav-item active-on-child-route">
+          <li
+            class="nav-item active-on-child-route"
+            v-if="isLoggedIn"
+          >
             <router-link class="nav-link" to="/clients">Clients</router-link>
           </li>
-          <li class="nav-item active-on-child-route">
+          <li
+            class="nav-item active-on-child-route"
+            v-if="isLoggedIn"
+          >
             <router-link class="nav-link" to="/my-ewb">Eway Bills</router-link>
           </li>
         </ul>
-        <div class="dropdown">
+        <div
+          class="dropdown"
+          v-if="isLoggedIn"
+        >
           <div
             class="dropdown-toggle profile-dropdown"
             id="profileDropDown"
@@ -44,7 +53,12 @@
             aria-labelledby="profileDropDown"
           >
             <router-link class="dropdown-item" to="/my-profile">Profile</router-link>
-            <a class="dropdown-item" href="#">Logout</a>
+            <p
+              class="dropdown-item my-0"
+              @click.prevent.stop="logUserOut"
+            >
+              Logout
+            </p>
           </div>
         </div>
       </div>
@@ -53,8 +67,22 @@
 </template>
 
 <script>
+import { mapGetters, mapActions } from 'vuex';
+
 export default {
   name: 'AppHeader',
+  computed: {
+    ...mapGetters({ isLoggedIn: 'isUserAuthenticated', userProfile: 'userProfile' }),
+  },
+  methods: {
+    ...mapActions(['logout']),
+    logUserOut() {
+      this.logout()
+        .then(() => {
+          this.$router.push('/login');
+        });
+    },
+  },
 };
 </script>
 
